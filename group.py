@@ -115,7 +115,6 @@ class Group(): #{{{
         return False
     # ========================================================================}}}
 # ----------------------------------------------------------------------------}}}
-
 # Creates a passable group function
 # In:   G, a group
 # Out:  a callable function that performs an embedded group's operation
@@ -124,10 +123,110 @@ def grp_op(G): #{{{
         return G.op(x,y)
     return op
 # ----------------------------------------------------------------------------}}}
+# Generate the closure of an operator group
+# In:   G, a group; U1 and U2, sets of elements in the operator; z, the added
+#       element
+# Out:  Nothing, but a correct operator table G.Op
+def close_operator(G, U1, U2, ad):
+    options = list(U1)
+    options.extend(U2)
+    s1 = set(U1)
+
+    while len(s1) != 0:
+        x = s1.pop()
+        a = random.choice(options)
+        if ad in G.Op[x]:
+            a = G.op(x,ad)
+        G.Op[x][ad] = a
+
+        # Form closure of op(op(x,ad),z) = op(a,z) = op(x,b) = op(x,op(ad,z))
+        for z in U2:
+            b = random.choice(options)
+            if z in G.Op[ad]:
+                b = G.op(ad,z)
+            G.Op[ad][z] = b
+
+            c = random.choice(options)
+            if z in G.Op[a] and b in G.Op[x]:
+                if G.op(a,z) != G.op(x,b):
+                    print('ERROR: Non-associativity detected when closing operator')
+                    print('\t m.op({0},{1})={2} while m.op({3},{4})={5}'.format(
+                        a,z,G.op(a,z),x,b,G.op(x,b)))
+                    sys.exit()
+                c = G.op(a,z)
+            elif z in G.Op[a]:
+                c = G.op(a,z)
+            elif b in G.Op[x]:
+                c = G.op(x,b)
+
+            G.Op[a][z] = c
+            G.Op[x][b] = c
+# ----------------------------------------------------------------------------}}}
+# Generates a random group
+# In:   Some stuff
+# Out:  A random group
+def rand_group(): #{{{
+    # Pick a random number of digits to use
+    digs = random.randrange(1,3+1)
+    elements = [ ''.join(tup) for tup in itertools.product(['0','1'], repeat=digs) ]
+    g = Group(
+                k=digs,
+                gop=None,
+                e=elements[ random.randrange(len(elements)) ],
+                elements=elements
+            )
+    # Fill out identity column
+    e = g.e()
+    for x in g.elements:
+        g.Op[e][x] = x
+        g.Op[x][e] = x
+    # Randomly fill in multiplication table
+    # Pick two elements, randomly assign their operation
+    s1 = set(g.elements)
+    u1 = []
+    u2 = []
+    while len(s1) != 0:
+        x = s1.pop()
+        u1.append(x)
+        s2 = set(g.elements)
+        while len(s2) != 0:
+            y = s2.pop()
+            u2.append(y)
+            a = random.choice(g.elements)
+            if y in g.Op[x]:
+                a = g.op(x,y)
+            g.Op[x][y] = a
+
+            # Form closure of op(op(x,y),z) = op(a,z) = op(x,b) = op(x,op(y,z))
+            for z in g.elements:
+                b = random.choice(g.elements)
+                if z in g.Op[y]:
+                    b = g.op(y,z)
+                g.Op[y][z] = b
+
+                c = random.choice(g.elements)
+                if z in g.Op[a] and b in g.Op[x]:
+                    if g.op(a,z) != g.op(x,b):
+                        print('ERROR: Non-associativity detected when generating random group.')
+                        print('\t m.op({0},{1})={2} while m.op({3},{4})={5}'.format(
+                            a,z,g.op(a,z),x,b,g.op(x,b)))
+                        sys.exit()
+                    c = g.op(a,z)
+                elif z in g.Op[a]:
+                    c = g.op(a,z)
+                elif b in g.Op[x]:
+                    c = g.op(x,b)
+
+                g.Op[a][z] = c
+                g.Op[x][b] = c
+                close_operator(g, u1, u2, c)
+
+    return g
+# ----------------------------------------------------------------------------}}}
 # Generates a proper group from generating elements
 # In:   G, a group; gens, the generating elements
-# Out:  a FancySet of elements in the subgroup
-def gen_subgroup(G, gens):
+# Out:  a FancySet of elem ents in the subgroup
+def gen_subgroup(G, gens): #{{{
     cur_set = comp_lib.FancySet(initial=gens, addl=[ 'generator' for _ in gens ])
     new_set = comp_lib.FancySet(initial=[G.e()], addl='identity element') # ensures e exists
     # Add inverse elements
@@ -174,12 +273,11 @@ def gen_subgroup(G, gens):
                 new_set.add(xi, addl='Inverse of {0}'.format(x))
     return cur_set
 # ----------------------------------------------------------------------------}}}
-
 # Creates a random subgroup
 # In:   num_gens, the number of generators for the subgroup (-1 if a random amount
 #       is desired); G, a group object; Ops, list of relevant operators
-# Out:  whoknows
-def rand_subgroup(G, num_gens=-1):
+# Out:  a subgroup of G
+def rand_subgroup(G, num_gens=-1): #{{{
     if num_gens == -1:
         num_gens = random.randrange(len(G))
     gens = comp_lib.FancySet()
@@ -229,7 +327,10 @@ if __name__ == '__main__': #{{{
         )
 
     start_time = time.time()
-    test_rand_subgroups()
+    #test_rand_subgroups()
+    rg = rand_group()
     end_time = time.time()
+    print(str(rg))
+    print('Is this a group? {0}'.format(rg.is_group()))
     print('Total execution time: {0} seconds'.format(end_time-start_time))
 # ----------------------------------------------------------------------------}}}
