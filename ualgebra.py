@@ -432,7 +432,7 @@ def transitive_closure_layer(C, C_new, A, Search=False):  # {{{
   # C and C_new are sets of elements, with C_new disjoint from C. A is the
   # underlying algebra. C is assumed to be transitively closed. Returns a set
   # C_newer of elements that are not in C u C_newer but are in the transitive
-  # closure. 
+  # closure.
 
   C_newer = FancySet()
 
@@ -497,6 +497,16 @@ def cong_classes(C, A): # {{{
           found.add(b)
           classes[-1].append(b)
   return classes
+#----------------------------------------------------------------------------}}}
+def rand_subgrp(Group, Ops, num_gens=-1, Progress=True): # {{{
+    if num_gens == -1:
+        num_gens = random.randrange(len(Group))
+    Gens = FancySet()
+    for _ in range(num_gens):
+        Gens.add(random.choice(Group.elements), addl='generator')
+    return subalg_gen(Gens, Ops, Progress=Progress, Search=None,\
+        ExtraClosure=None, SavePartial=None, \
+        MaxLevels=-1)
 #----------------------------------------------------------------------------}}}
 
 

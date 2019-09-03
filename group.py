@@ -5,7 +5,7 @@
 from utils.summations import dot_prod
 from utils.number_representation import *
 from utils.printing import *
-comp_lib = __import__('computation-library')
+UA = __import__('ualgebra')
 import itertools
 import math
 import random
@@ -320,17 +320,19 @@ def test_rand_subgroups(iterations=1000, digits=5): #{{{
 # ----------------------------------------------------------------------------}}}
 if __name__ == '__main__': #{{{
     g = Group(
-            k=3,
+            k=5,
             gop=lambda x,y: int(x,2) & int(y,2),
-            e='1'*3,
-            elements=[ ''.join(tup) for tup in itertools.product( ['0','1'], repeat=3 ) ]
+            e='1'*5,
+            elements=[ ''.join(tup) for tup in itertools.product( ['0','1'], repeat=5 ) ]
         )
+    bitwise_mult = grp_op(g)
+    M = UA.Operation(bitwise_mult, 2, 'bitwise multiplication')
 
     start_time = time.time()
     #test_rand_subgroups()
-    rg = rand_group()
+    rsg = UA.rand_subgrp(g, [M])
     end_time = time.time()
-    print(str(rg))
-    print('Is this a group? {0}'.format(rg.is_group()))
+    print(str(rsg))
+    print('Is this a group? {0}'.format(rsg.is_group()))
     print('Total execution time: {0} seconds'.format(end_time-start_time))
 # ----------------------------------------------------------------------------}}}
