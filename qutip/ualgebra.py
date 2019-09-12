@@ -288,10 +288,37 @@ class Operation: # {{{1
 #----------------------------------------------------------------------------}}}1
 
 def is_reln(R, Ops, Skip = [], Progress=True, return_on_fail=True): # {{{
-  found_new = lambda x: True
-  Rp = single_closure([], R, Ops, Progress=Progress, Search=found_new)
-  return R == Rp
+  cores = 4
+  pool = Pool(cores)
+  op_total = len(Ops)
+  for op_count, op in enumerate(Ops):
+    if op.name in Skip:
+      continue
+    args_total = len(R)**op.arity
+    args_all = product(R, repeat=op.arity)
+    # We have to seek the arguments that gave a certain result. In case we don't
+    # return_on_fail, we should keep track of the previous index. Not a good
+    # soln...
+    args_all_seek = product(R, repeat=op.arity)
+    prev_args_count = -1
+    for args_count, result in enumerate(pool.imap(op, args_all, chunksize=1000)):
+      if result not in R:
+        stdout.write("\n\nFound " + str(result) + ":\n")
+        args = next(islice(args_all_seek, args_count-prev_args_count-1, None))
+        prev_args_count = args_count
+        stdout.write(op.pprint(args) + "\nwhich is not in the relation.\n")
+        if return_on_fail:
+          return False
+      if Progress and args_count % 100000 == 0:
+        stdout.write( "\roperation " + op.name \
+            + " " + str(op_count+1) + " / " + str(op_total) \
+            + ", argument " + str(args_count) + " / " + str(args_total) \
+            + " ~ " + str( round( args_count/args_total*100, 4 ) ) + "%  " )
+        stdout.flush()
+  if Progress: stdout.write("  done.\n")
+  return True
 #----------------------------------------------------------------------------}}}
+
 def powerset_as_indicators(size): # {{{
   I = [0]*size
   T = [1]*size
@@ -304,7 +331,7 @@ def powerset_as_indicators(size): # {{{
     I[index] = 1
   yield copy(I)
 #----------------------------------------------------------------------------}}}
-def single_closure(G_old, G_new, Ops, MaxNew=-1, Progress=True, Search=None):  # {{{
+def single_closure(G_old, G_new, Ops, Progress=True, Search=None):  # {{{
   # G_old is a set of elements. G_new has been computed by taking G_old and
   # applying single functions from Ops to it. It should be disjoint from G_old.
   # We return G_newer, which is the result of applying functions from Ops to
@@ -346,13 +373,11 @@ def single_closure(G_old, G_new, Ops, MaxNew=-1, Progress=True, Search=None):  #
               + " ~ " + str( round( args_count/args_total*100, 4 ) ) + "%" \
               + ", new elements: " + str(len(G_newer)) + " "*2 )
           stdout.flush()
-        if 0 < MaxNew <= len(G_newer):  # return if found the max number of new elements
-          return G_newer
   if Progress:
     stdout.write("  done.\n")
   return G_newer
 #----------------------------------------------------------------------------}}}
-def subalg_gen(Generators, Ops, MaxNew=-1, Progress=True, Search=None, ExtraClosure=None, SavePartial=None, MaxLevels=-1):  # {{{
+def subalg_gen(Generators, Ops, Progress=True, Search=None, ExtraClosure=None, SavePartial=None, MaxLevels=-1):  # {{{
   G_old = FancySet()
   G_new = FancySet(initial=Generators)
   closure_level = 0
@@ -366,7 +391,7 @@ def subalg_gen(Generators, Ops, MaxNew=-1, Progress=True, Search=None, ExtraClos
       stdout.write( "Closure level " + str(closure_level) + ", " )
       stdout.write( "at " + str(len(G_old) + len(G_new)) + " elements:\n" )
       stdout.flush()
-    G_newer = single_closure(G_old, G_new, Ops, MaxNew=MaxNew, Progress=Progress, Search=Search)
+    G_newer = single_closure(G_old, G_new, Ops, Progress=Progress, Search=Search)
     if ExtraClosure != None:
       G_extra = ExtraClosure(G_old, G_new, Ops, Search=Search)
       if Progress:
@@ -407,7 +432,7 @@ def transitive_closure_layer(C, C_new, A, Search=False):  # {{{
   # C and C_new are sets of elements, with C_new disjoint from C. A is the
   # underlying algebra. C is assumed to be transitively closed. Returns a set
   # C_newer of elements that are not in C u C_newer but are in the transitive
-  # closure.
+  # closure. 
 
   C_newer = FancySet()
 
@@ -426,7 +451,7 @@ def transitive_closure_layer(C, C_new, A, Search=False):  # {{{
           stdout.write( "\nFound:\n" + why + "\n" )
   return C_newer
 #----------------------------------------------------------------------------}}}
-def cong_gen(Generators, Ops, MaxNew=-1, Progress=True, Search=None, SavePartial=None, MaxLevels=-1):  # {{{
+def cong_gen(Generators, Ops, Progress=True, Search=None, SavePartial=None, MaxLevels=-1):  # {{{
 
   A = FancySet()
   GeneratorsCong = FancySet( initial=Generators )
@@ -444,23 +469,21 @@ def cong_gen(Generators, Ops, MaxNew=-1, Progress=True, Search=None, SavePartial
   def transitive_closure_wrapper(C, C_new, Ops, A=A, Search=Search):
     return transitive_closure_layer(C, C_new, A, Search=Search)
 
-  return subalg_gen(GeneratorsCong, Ops, MaxNew=MaxNew, Progress=Progress, \
-      Search=Search, ExtraClosure=transitive_closure_wrapper, \
-      SavePartial=SavePartial, MaxLevels=MaxLevels)
+  return subalg_gen(GeneratorsCong, Ops, Progress=Progress, Search=Search, \
+      ExtraClosure=transitive_closure_wrapper, SavePartial=SavePartial, \
+      MaxLevels=MaxLevels)
 #----------------------------------------------------------------------------}}}
-def rand_cong(A, Ops, num_gen=-1, MaxNew=-1, Progress=False): # {{{
+def rand_cong(A, Ops, num_gen=-1, Progress=True): # {{{
   if num_gen == -1:
     num_gen = randrange(1,len(A)+1)
 
-  G = []
+  G = [ [a,a] for a in A ]
   A_list = list(A)
   for _ in range(num_gen):
     a = choice(A_list)
     b = choice(A_list)
     G.append([a,b])
-  Gens = G + [ [a,a] for a in A ]
-  # return the congruence as well as the generators
-  return cong_gen(Gens, Ops, MaxNew=MaxNew, Progress=Progress), G
+  return cong_gen(G, Ops, Progress=Progress)
 #----------------------------------------------------------------------------}}}
 def cong_classes(C, A): # {{{
   # output the congruence classes of C
@@ -474,16 +497,6 @@ def cong_classes(C, A): # {{{
           found.add(b)
           classes[-1].append(b)
   return classes
-#----------------------------------------------------------------------------}}}
-def rand_subgrp(Group, Ops, num_gens=-1, Progress=True): # {{{
-    if num_gens == -1:
-        num_gens = random.randrange(len(Group))
-    Gens = FancySet()
-    for _ in range(num_gens):
-        Gens.add(random.choice(Group.elements), addl='generator')
-    return subalg_gen(Gens, Ops, Progress=Progress, Search=None,\
-        ExtraClosure=None, SavePartial=None, \
-        MaxLevels=-1)
 #----------------------------------------------------------------------------}}}
 
 
