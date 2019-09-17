@@ -140,4 +140,3 @@ redux = {} # The things lost reduced to another value
 #    print(row)
 #print('BB')
 #print(str(BB))
-#----------------------------------------------------------------------------}}}1
