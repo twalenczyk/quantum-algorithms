@@ -8,40 +8,7 @@ import ualgebra as UA
 
 # TODO Supress warnings about imaginary numbers
 
-# Generates an oracle function for Simon's Algorithm
-# In: k, order (?) of the group; D, the hidden subgroup D;
-#     c, the common value for f(x) forall x in D
-# Out: a function (array-form) that seperates cosets on the hidden subgroup
-#     (f(a)=f(b) iff a-b in D)
-def gen_oracle(k, D):
-    c = 0
-    f = [ -1 for _ in range(2**k) ]
-    for x in range(2**k):
-        for y in range(2**k):
-            if x^y in D:
-                if x == y and f[x] == -1:
-                    f[x] = c
-                    c += 1
-                else:
-                    f[x] = f[y] = f[x] if x < y else f[y]
-    return f
 
-# Generates an oracle operator for Simon's Algorithm (Note: assumes structure
-#     of oracle)
-# In: k, the size of the group; f, the oracle function; mult, multiplier for the
-#       if applicable
-# Out: a (2**n)x(2**n) unitary operator embedding the oracle function
-def gen_oracle_op(n, f, arity=2):
-    ret = [ [] for _ in range(2**(2*n)) ]
-    for x in range(len(f)):
-        for y in range(len(f)):
-            fx = f[x]
-            x_ket = int_to_ket(x,n)
-            y_ket = int_to_ket((fx+y)%2**n, n)
-            ket = tensor( x_ket, y_ket )
-            for i,entry in enumerate(ket_as_list(ket)):
-                ret[i].append(entry)
-    return ret
 
 
 # TODO Implement measurement phase

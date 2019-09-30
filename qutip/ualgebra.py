@@ -500,3 +500,4 @@ def rand_cong(A, Ops, num_gen=-1, MaxNew=-1, Progress=False): # {{{
   # return the congruence as well as the generators
   return cong_gen(Gens, Ops, MaxNew=MaxNew, Progress=Progress), G
 #----------------------------------------------------------------------------}}}
+
