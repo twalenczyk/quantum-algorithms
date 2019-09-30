@@ -9,6 +9,7 @@ from itertools import *
 from random import choice, randrange
 from sys import *
 import cProfile, pickle, random, shelve, string
+import pathos.multiprocessing as MP
 #---------------------------------------------------------------------------}}}1
 
 # data structures, etc
@@ -312,7 +313,7 @@ def single_closure(G_old, G_new, Ops, MaxNew=-1, Progress=True, Search=None):  #
   # inputs from G_old and G_new, with at least 1 element of G_new as input. It
   # will be disjoint from G_old+G_new.
 
-  with Pool() as pool:
+  with MP.ProcessPool() as pool:
     G_newer = FancySet()
     op_total = len(Ops)
     for op_count, op in enumerate(Ops):
@@ -410,7 +411,7 @@ def transitive_closure_layer(C, C_new, A, Search=False):  # {{{
   # C and C_new are sets of elements, with C_new disjoint from C. A is the
   # underlying algebra. C is assumed to be transitively closed. Returns a set
   # C_newer of elements that are not in C u C_newer but are in the transitive
-  # closure. 
+  # closure.
 
   C_newer = FancySet()
 

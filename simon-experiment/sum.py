@@ -4,6 +4,7 @@ from itertools import *
 from random import *
 from sys import *
 import ualgebra as UA
+import post_ops as PO
 #----------------------------------------------------------------------------}}}1
 
 def simon_sum(cong, a, b, verbose=False): # {{{
@@ -12,6 +13,7 @@ def simon_sum(cong, a, b, verbose=False): # {{{
 
   S = 0
   for [s, t] in cong:
+    print("s t", s,t)
     S += (-1) ** (exp(s,t) % 2)
 
   if verbose:
@@ -47,18 +49,29 @@ def maj01(*args):
   return args[0]
 def maj(*args):
   return list( map(maj01, *args) )
-#----------------------------------------------------------------------------}}}
+
+def extend_ops_cwise(Ops):
+    new_Ops = []
+    for op in Ops:
+        temp_func = op.function
+        new_op = UA.Operation(lambda *args : list( map(temp_func, *args) ),
+                op.arity, "componenent-wise "+op.name)
+        new_Ops.append(new_op)
+    return new_Ops
+
 
 Ops = []
 #Ops.append(UA.Operation(meet, 2, "meet"))
 #Ops.append(UA.Operation(join, 2, "join")) # comment out for semilattices
-Ops.append(UA.Operation(maj, 3, "maj"))
+#Ops.append(UA.Operation(maj, 3, "maj"))
+#Ops = PO.named_clone("MPT0inf")
+Ops = extend_ops_cwise(PO.named_clone("DM"))
 
 n = 4
 Dn = [list(a) for a in product([0,1],repeat=n)]   # {0,1}^n
 
 passes = True
-while passes:
+while passes and count < 100:
   A, A_gens = UA.rand_subalg(Dn, Ops, Progress=False)
   #A = UA.FancySet( initial=Dn )
   #A_gens = []
@@ -66,6 +79,7 @@ while passes:
   min_preimages = [meet_set(C) for C in UA.cong_classes(Theta, A)]
   stdout.write(str(round(len(min_preimages) / len(A), 2)) + " ")
   stdout.flush()
+  print("A", str(A))
   for a,b in product(A,repeat=2):
     S = simon_sum(Theta, a, b)
     if (S != 0 and a != b) or (S == 0 and a == b in min_preimages):
@@ -87,3 +101,7 @@ for a,b in product(A, repeat=2):
     S = simon_sum(Theta, a, b, verbose=True)
     print("a b S:", a, b, S)
     break
+
+#print("Diagonal Entries")
+#for a in A:
+#    print('a', simon_sum(Theta, a, a))
