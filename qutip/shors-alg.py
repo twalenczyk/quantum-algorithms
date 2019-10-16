@@ -8,7 +8,7 @@ from random import *
 import operator
 import ualgebra as UA
 import math
-import cmath
+from cmath import *
 
 # TODO Supress warnings about imaginary numbers
 
@@ -21,10 +21,15 @@ def gen_ua_oracle(n,q,a):
 
 def gen_qft_op(n):
     structure = [ [1] * 2**n ] * 2**n
-    exp = lambda a,b : cmath.e**(2*pi*1j)
+    exp = lambda a,b : e**(2*pi*a*b*1j/(2**n))
+    #complex(0,1) === 0+1j
     for a in range(2**n):
         for b in range(2**n):
-            structure[a][b] =
+            structure[a][b] = exp(a,b)
+    return Qobj(
+                inpt=structure,
+                dims=[ [2]*n, [2]*n ]
+            )
 
 def iqft_circuit(n, state):
     # swap qubits
@@ -32,7 +37,7 @@ def iqft_circuit(n, state):
                 inpt = state.dims[::-1],
                 dims = state.dims
             )
-    iqft = qft.trans()
+    iqft = gen_qft_op.trans()
     s = iqft*s
     return s
 
@@ -96,13 +101,20 @@ def simons_alg(y):
 
 # Using the partial implementation of Simon's algorithm
 
-n = 3
+n = 2
 Dn = [list(a) for a in list(product([0,1],repeat=n))]
 
 y = randrange(1, 2**n)
-p1 = simons_alg(y)
 
-print("(y,p1)=>",(y,p1))
+op = gen_qft_op(n)
+for row in op:
+    print(row)
+
+
+
+#p1 = simons_alg(y)
+
+#print("(y,p1)=>",(y,p1))
 
 #f = gen_ua_oracle(n,)
 #print(f)
