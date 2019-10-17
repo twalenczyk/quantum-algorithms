@@ -20,9 +20,8 @@ def gen_ua_oracle(n,q,a):
     return f
 
 def gen_qft_op(n):
-    structure = [ [1] * 2**n ] * 2**n
+    structure = [ [ 1 for _ in range(2**n) ] for _ in range(2**n) ]
     exp = lambda a,b : e**(2*pi*a*b*1j/(2**n))
-    #complex(0,1) === 0+1j
     for a in range(2**n):
         for b in range(2**n):
             structure[a][b] = exp(a,b)
@@ -33,9 +32,10 @@ def gen_qft_op(n):
 
 def iqft_circuit(n, state):
     # swap qubits
+    print(state)
+    #sup = state.full().astype(np.csingle).flatten().tolist()
     s = Qobj(
-                inpt = state.dims[::-1],
-                dims = state.dims
+                inpt = sup[::-1],
             )
     iqft = gen_qft_op.trans()
     s = iqft*s
@@ -49,10 +49,15 @@ def period_finding(n,q,a):
     zn = tensor([ basis(2, 0) for _ in range(n) ])
     ht = hadamard_transform(n)
     xi = ht * zn
-    fxi = U*xi
+    fxi = U*tensor(xi, zn)
 
     # Perform inverse quantum Fourier Transform
-    post_qft = iqft_circuit(n, fxi)
+    s = Qobj(
+                inpt = fxi.data[::-1],
+            )
+    iqft = gen_qft_op.trans()
+    s = iqft*s
+    post_qft = iqft*s
 
     # Discard unnecessary information
     dm = ptrace_wrt_regs(post_qft,[0],n)
@@ -107,11 +112,16 @@ Dn = [list(a) for a in list(product([0,1],repeat=n))]
 y = randrange(1, 2**n)
 
 op = gen_qft_op(n)
+i = 1
 for row in op:
-    print(row)
+    print("row", i)
+    i += 1
+    for e in row:
+        print(e, ",")
 
 
 
+print(period_finding(3, 6, 3))
 #p1 = simons_alg(y)
 
 #print("(y,p1)=>",(y,p1))
