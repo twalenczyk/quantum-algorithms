@@ -79,7 +79,8 @@ def clone_alg(n,P):
 
 # Using the partial implementation of Simon's algorithm
 
-Ops = PO.named_clone("MP")
+Ops = PO.named_clone("A")
+#Ops = PO.named_clone("MP")
 #Ops = PO.named_clone("DM")
 #Ops = PO.named_clone("AP0")
 #Ops = PO.named_clone("AP1")
@@ -91,7 +92,7 @@ Ops = PO.named_clone("MP")
 print("Ops")
 for op in Ops:
     print(op.name)
-n = 3
+n = 4
 Dn = [list(a) for a in list(product([0,1],repeat=n))]
 #A, A_gens = UA.rand_subalg(Dn, Ops, Progress=False)
 A = UA.FancySet( initial=Dn )
